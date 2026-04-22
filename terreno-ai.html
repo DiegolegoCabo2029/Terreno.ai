@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Terreno.ai — Analiza tu propiedad con IA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0f0d;
+    --surface: #111814;
+    --surface2: #18211c;
+    --surface3: #1f2b24;
+    --border: rgba(100,200,130,0.12);
+    --border2: rgba(100,200,130,0.22);
+    --accent: #3ddc84;
+    --accent2: #27a85a;
+    --accent-dim: rgba(61,220,132,0.12);
+    --accent-glow: rgba(61,220,132,0.06);
+    --text: #e8f0eb;
+    --text2: #8fab95;
+    --text3: #556b5c;
+    --red: #ff5c5c;
+    --amber: #f4a228;
+    --blue: #5cadff;
+    --radius: 12px;
+    --radius-lg: 18px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  /* NOISE TEXTURE overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    opacity: 0.4;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* GRID background */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: linear-gradient(rgba(61,220,132,0.03) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(61,220,132,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrap {
+    position: relative;
+    z-index: 1;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* NAV */
+  nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 22px;
+    letter-spacing: -0.5px;
+  }
+  .logo span { color: var(--accent); }
+
+  .nav-badge {
+    font-size: 11px;
+    font-weight: 500;
+    background: var(--accent-dim);
+    color: var(--accent);
+    border: 1px solid rgba(61,220,132,0.25);
+    border-radius: 100px;
+    padding: 4px 12px;
+    letter-spacing: 0.5px;
+  }
+
+  /* HERO */
+  .hero {
+    padding: 64px 0 48px;
+    text-align: center;
+  }
+
+  .hero-tag {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 20px;
+    opacity: 0.8;
+  }
+
+  .hero h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(32px, 5vw, 52px);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -1px;
+    margin-bottom: 20px;
+    color: var(--text);
+  }
+
+  .hero h1 em {
+    font-style: normal;
+    color: var(--accent);
+  }
+
+  .hero p {
+    color: var(--text2);
+    max-width: 520px;
+    margin: 0 auto 36px;
+    font-size: 16px;
+    font-weight: 300;
+  }
+
+  /* INPUT CARD */
+  .input-card {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+    margin-bottom: 32px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .input-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0.5;
+  }
+
+  .input-label {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 10px;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    background: var(--surface2);
+    border-radius: var(--radius);
+    padding: 4px;
+  }
+
+  .tab {
+    flex: 1;
+    padding: 8px 12px;
+    border-radius: 9px;
+    border: none;
+    background: transparent;
+    color: var(--text2);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+
+  .tab.active {
+    background: var(--surface3);
+    color: var(--accent);
+    border: 1px solid var(--border2);
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  @media (max-width: 600px) {
+    .form-row { grid-template-columns: 1fr; }
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .form-group label {
+    font-size: 12px;
+    color: var(--text3);
+    font-weight: 500;
+  }
+
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    padding: 10px 14px;
+    outline: none;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+  }
+
+  .form-group select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238fab95' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+    cursor: pointer;
+  }
+
+  .form-group select option {
+    background: #18211c;
+    color: var(--text);
+  }
+
+  .form-group textarea {
+    resize: vertical;
+    min-height: 90px;
+    line-height: 1.5;
+  }
+
+  .form-group input:focus,
+  .form-group select:focus,
+  .form-group textarea:focus {
+    border-color: var(--accent2);
+    background: var(--surface3);
+  }
+
+  .form-group input::placeholder,
+  .form-group textarea::placeholder {
+    color: var(--text3);
+  }
+
+  .analyze-btn {
+    width: 100%;
+    padding: 14px;
+    margin-top: 8px;
+    background: var(--accent);
+    color: #071409;
+    border: none;
+    border-radius: var(--radius);
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .analyze-btn:hover { background: #52e897; transform: translateY(-1px); }
+  .analyze-btn:active { transform: translateY(0); }
+  .analyze-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+  .analyze-btn .btn-inner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  /* LOADING */
+  .loading-state {
+    display: none;
+    padding: 40px;
+    text-align: center;
+  }
+
+  .loading-state.active { display: block; }
+
+  .loader-ring {
+    width: 44px; height: 44px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 16px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: 280px;
+    margin: 20px auto 0;
+  }
+
+  .loading-step {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--text3);
+    opacity: 0;
+    transform: translateY(6px);
+    transition: all 0.4s;
+  }
+
+  .loading-step.visible { opacity: 1; transform: translateY(0); color: var(--text2); }
+  .loading-step.done { color: var(--accent); }
+
+  .step-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--text3);
+    flex-shrink: 0;
+    transition: background 0.3s;
+  }
+
+  .loading-step.done .step-dot { background: var(--accent); }
+
+  /* RESULTS */
+  .results-wrap {
+    display: none;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  .results-wrap.active { display: block; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .results-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .results-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .score-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 100px;
+    font-size: 13px;
+    font-weight: 600;
+    border: 1px solid;
+  }
+
+  .score-badge.safe { color: var(--accent); border-color: rgba(61,220,132,0.3); background: rgba(61,220,132,0.08); }
+  .score-badge.caution { color: var(--amber); border-color: rgba(244,162,40,0.3); background: rgba(244,162,40,0.08); }
+  .score-badge.risk { color: var(--red); border-color: rgba(255,92,92,0.3); background: rgba(255,92,92,0.08); }
+
+  .results-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+
+  @media (max-width: 600px) {
+    .results-grid { grid-template-columns: 1fr; }
+  }
+
+  .result-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .result-card.full { grid-column: 1 / -1; }
+
+  .result-card-tag {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 12px;
+  }
+
+  .value-display {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .value-display.green { color: var(--accent); }
+  .value-display.amber { color: var(--amber); }
+  .value-display.red { color: var(--red); }
+  .value-display.blue { color: var(--blue); }
+
+  .value-sub {
+    font-size: 12px;
+    color: var(--text3);
+    margin-bottom: 14px;
+  }
+
+  .value-range {
+    display: flex;
+    gap: 10px;
+    font-size: 12px;
+  }
+
+  .range-item {
+    flex: 1;
+    background: var(--surface2);
+    border-radius: 8px;
+    padding: 8px 10px;
+  }
+
+  .range-label { color: var(--text3); font-size: 11px; margin-bottom: 2px; }
+  .range-val { font-weight: 500; font-size: 13px; }
+
+  /* PERMITS LIST */
+  .permits-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .permit-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px;
+    background: var(--surface2);
+    border-radius: var(--radius);
+    border-left: 3px solid;
+    transition: background 0.2s;
+  }
+
+  .permit-item:hover { background: var(--surface3); }
+  .permit-item.required { border-left-color: var(--accent); }
+  .permit-item.optional { border-left-color: var(--amber); }
+  .permit-item.warning { border-left-color: var(--red); }
+
+  .permit-icon {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .permit-item.required .permit-icon { background: rgba(61,220,132,0.12); }
+  .permit-item.optional .permit-icon { background: rgba(244,162,40,0.12); }
+  .permit-item.warning .permit-icon { background: rgba(255,92,92,0.12); }
+
+  .permit-info { flex: 1; }
+  .permit-name { font-weight: 500; font-size: 14px; margin-bottom: 2px; }
+  .permit-desc { font-size: 12px; color: var(--text2); line-height: 1.5; }
+  .permit-meta { font-size: 11px; color: var(--text3); margin-top: 4px; }
+
+  .permit-tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    padding: 2px 8px;
+    border-radius: 100px;
+    margin-bottom: 4px;
+  }
+
+  .permit-item.required .permit-tag { background: rgba(61,220,132,0.15); color: var(--accent); }
+  .permit-item.optional .permit-tag { background: rgba(244,162,40,0.15); color: var(--amber); }
+  .permit-item.warning .permit-tag { background: rgba(255,92,92,0.15); color: var(--red); }
+
+  /* LEGAL CHECKLIST */
+  .legal-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .legal-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--surface2);
+    border-radius: var(--radius);
+    font-size: 13px;
+  }
+
+  .legal-check {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px;
+    flex-shrink: 0;
+    font-weight: 700;
+  }
+
+  .legal-check.ok { background: rgba(61,220,132,0.15); color: var(--accent); }
+  .legal-check.warn { background: rgba(244,162,40,0.15); color: var(--amber); }
+  .legal-check.bad { background: rgba(255,92,92,0.15); color: var(--red); }
+
+  /* TIMELINE */
+  .timeline {
+    display: flex;
+    gap: 0;
+    position: relative;
+  }
+
+  .timeline::before {
+    content: '';
+    position: absolute;
+    top: 16px; left: 8px; right: 8px;
+    height: 2px;
+    background: var(--border);
+  }
+
+  .timeline-step {
+    flex: 1;
+    text-align: center;
+    padding-top: 36px;
+    position: relative;
+  }
+
+  .timeline-dot {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    border: 2px solid;
+    background: var(--surface);
+    z-index: 1;
+  }
+
+  .timeline-step.done .timeline-dot { background: var(--accent); border-color: var(--accent); }
+  .timeline-step.active .timeline-dot { background: var(--surface); border-color: var(--accent); box-shadow: 0 0 0 4px rgba(61,220,132,0.15); }
+  .timeline-step.pending .timeline-dot { background: var(--surface); border-color: var(--text3); }
+
+  .timeline-label { font-size: 11px; color: var(--text3); line-height: 1.4; }
+  .timeline-step.done .timeline-label, .timeline-step.active .timeline-label { color: var(--text2); }
+
+  /* SUMMARY PROSE */
+  .summary-prose {
+    font-size: 14px;
+    color: var(--text2);
+    line-height: 1.8;
+  }
+
+  .summary-prose strong { color: var(--text); font-weight: 500; }
+  .summary-prose .hl { color: var(--accent); font-weight: 500; }
+  .summary-prose .warn { color: var(--amber); font-weight: 500; }
+  .summary-prose .danger { color: var(--red); font-weight: 500; }
+
+  /* DISCLAIMER */
+  .disclaimer {
+    font-size: 11px;
+    color: var(--text3);
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+    margin-top: 24px;
+    line-height: 1.6;
+  }
+
+  /* RESET BTN */
+  .reset-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: transparent;
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    color: var(--text2);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 20px;
+  }
+
+  .reset-btn:hover { background: var(--surface2); color: var(--text); }
+
+  /* ERROR */
+  .error-box {
+    display: none;
+    background: rgba(255,92,92,0.08);
+    border: 1px solid rgba(255,92,92,0.25);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    color: var(--red);
+    font-size: 14px;
+    margin-top: 16px;
+  }
+  .error-box.active { display: block; }
+
+  /* FEATURES STRIP */
+  .features {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+    padding: 24px 0;
+    border-top: 1px solid var(--border);
+    margin-top: 8px;
+  }
+
+  .feat {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text3);
+  }
+
+  .feat-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    opacity: 0.6;
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <nav>
+    <div class="logo">Terreno<span>.ai</span></div>
+    <div class="nav-badge">Ciudad de México</div>
+  </nav>
+
+  <div class="hero">
+    <div class="hero-tag">Análisis inteligente de propiedades</div>
+    <h1>Conoce el valor real<br>y los trámites <em>antes</em> de comprar</h1>
+    <p>Ingresa los datos de cualquier propiedad en CDMX y la IA analiza permisos, situación legal y valor justo de mercado en segundos.</p>
+  </div>
+
+  <!-- INPUT FORM -->
+  <div class="input-card" id="formCard">
+    <div class="input-label">Tipo de consulta</div>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('compra', this)">Compra de terreno / inmueble</button>
+      <button class="tab" onclick="switchTab('construccion', this)">Construcción o remodelación</button>
+      <button class="tab" onclick="switchTab('legal', this)">Revisión legal solamente</button>
+    </div>
+
+    <!-- COMPRA FORM -->
+    <div id="tab-compra">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Dirección o colonia</label>
+          <input type="text" id="direccion" placeholder="Ej: Col. Condesa, Del. Cuauhtémoc" />
+        </div>
+        <div class="form-group">
+          <label>Alcaldía</label>
+          <select id="alcaldia">
+            <option value="">Selecciona alcaldía</option>
+            <option>Álvaro Obregón</option>
+            <option>Azcapotzalco</option>
+            <option>Benito Juárez</option>
+            <option>Coyoacán</option>
+            <option>Cuajimalpa de Morelos</option>
+            <option>Cuauhtémoc</option>
+            <option>Gustavo A. Madero</option>
+            <option>Iztacalco</option>
+            <option>Iztapalapa</option>
+            <option>La Magdalena Contreras</option>
+            <option>Miguel Hidalgo</option>
+            <option>Milpa Alta</option>
+            <option>Tláhuac</option>
+            <option>Tlalpan</option>
+            <option>Venustiano Carranza</option>
+            <option>Xochimilco</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Precio pedido (MXN)</label>
+          <input type="text" id="precio" placeholder="Ej: 3,500,000" />
+        </div>
+        <div class="form-group">
+          <label>Superficie (m²)</label>
+          <input type="number" id="superficie" placeholder="Ej: 120" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Tipo de propiedad</label>
+          <select id="tipoPropiedad">
+            <option value="">Selecciona tipo</option>
+            <option>Terreno sin construcción</option>
+            <option>Casa habitación</option>
+            <option>Departamento</option>
+            <option>Local comercial</option>
+            <option>Bodega / nave industrial</option>
+            <option>Edificio de departamentos</option>
+            <option>Oficina</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Uso de suelo conocido</label>
+          <select id="usoSuelo">
+            <option value="">No sé / no especificado</option>
+            <option>Habitacional (H)</option>
+            <option>Habitacional Mixto (HM)</option>
+            <option>Comercial (CE)</option>
+            <option>Industrial (I)</option>
+            <option>Suelo de Conservación (SC)</option>
+            <option>Área Verde (AV)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom: 16px;">
+        <label>Información adicional (opcional)</label>
+        <textarea id="infoAdicional" placeholder="Escribe aquí cualquier detalle relevante: escrituras disponibles, situación del vendedor, problemas conocidos, si tiene adeudos, etc."></textarea>
+      </div>
+    </div>
+
+    <button class="analyze-btn" id="analyzeBtn" onclick="runAnalysis()">
+      <div class="btn-inner">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M5.5 8h5M8 5.5v5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        Analizar con IA
+      </div>
+    </button>
+
+    <div class="error-box" id="errorBox"></div>
+  </div>
+
+  <!-- LOADING -->
+  <div class="loading-state" id="loadingState">
+    <div class="loader-ring"></div>
+    <p style="color: var(--text2); font-size: 14px;">Analizando tu propiedad…</p>
+    <div class="loading-steps">
+      <div class="loading-step" id="step1"><div class="step-dot"></div>Verificando uso de suelo en CDMX</div>
+      <div class="loading-step" id="step2"><div class="step-dot"></div>Estimando valor de mercado</div>
+      <div class="loading-step" id="step3"><div class="step-dot"></div>Identificando trámites necesarios</div>
+      <div class="loading-step" id="step4"><div class="step-dot"></div>Revisando alertas legales</div>
+      <div class="loading-step" id="step5"><div class="step-dot"></div>Preparando reporte</div>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="results-wrap" id="resultsWrap"></div>
+
+  <!-- FEATURES STRIP -->
+  <div class="features">
+    <div class="feat"><div class="feat-dot"></div>Uso de suelo CDMX</div>
+    <div class="feat"><div class="feat-dot"></div>Permisos de construcción</div>
+    <div class="feat"><div class="feat-dot"></div>Valuación de mercado</div>
+    <div class="feat"><div class="feat-dot"></div>Alertas legales</div>
+    <div class="feat"><div class="feat-dot"></div>Trámites SEDUVI</div>
+    <div class="feat"><div class="feat-dot"></div>Revisión registral</div>
+  </div>
+</div>
+
+<script>
+let currentTab = 'compra';
+
+function switchTab(tab, el) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+async function runAnalysis() {
+  const btn = document.getElementById('analyzeBtn');
+  const errorBox = document.getElementById('errorBox');
+  errorBox.classList.remove('active');
+
+  const direccion = document.getElementById('direccion').value.trim();
+  const alcaldia = document.getElementById('alcaldia').value;
+  const precio = document.getElementById('precio').value.trim();
+  const superficie = document.getElementById('superficie').value.trim();
+  const tipoPropiedad = document.getElementById('tipoPropiedad').value;
+  const usoSuelo = document.getElementById('usoSuelo').value;
+  const infoAdicional = document.getElementById('infoAdicional').value.trim();
+
+  if (!direccion && !alcaldia) {
+    errorBox.textContent = 'Por favor ingresa al menos la colonia o alcaldía de la propiedad.';
+    errorBox.classList.add('active');
+    return;
+  }
+
+  btn.disabled = true;
+  document.getElementById('formCard').style.display = 'none';
+  document.getElementById('loadingState').classList.add('active');
+  document.getElementById('resultsWrap').classList.remove('active');
+
+  const steps = ['step1','step2','step3','step4','step5'];
+  const delays = [300, 900, 1600, 2300, 3000];
+  steps.forEach((s, i) => {
+    setTimeout(() => {
+      document.getElementById(s).classList.add('visible');
+      if (i > 0) document.getElementById(steps[i-1]).classList.add('done');
+    }, delays[i]);
+  });
+
+  const prompt = buildPrompt({ direccion, alcaldia, precio, superficie, tipoPropiedad, usoSuelo, infoAdicional, tab: currentTab });
+
+  try {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1000,
+        system: `Eres un experto en bienes raíces, trámites urbanos, uso de suelo y derecho inmobiliario en la Ciudad de México (CDMX). 
+Cuando el usuario te dé datos de una propiedad, debes responder ÚNICAMENTE en JSON válido (sin backticks, sin texto extra).
+El JSON debe tener exactamente esta estructura:
+{
+  "resumen": "string - resumen ejecutivo de 2-3 oraciones con las conclusiones clave",
+  "scoreLabel": "Seguro" | "Con precaución" | "Riesgo alto",
+  "scoreClass": "safe" | "caution" | "risk",
+  "valorEstimado": "string - ej: $2,800,000 – $3,400,000 MXN",
+  "valorM2": "string - ej: $28,000 – $34,000 MXN/m²",
+  "nivelPrecio": "Bajo mercado" | "En línea con mercado" | "Sobre precio" | "No determinable",
+  "nivelPrecioClass": "green" | "amber" | "red" | "blue",
+  "costoEstimadoTramites": "string - ej: $45,000 – $80,000 MXN",
+  "tiempoEstimado": "string - ej: 3 – 6 meses",
+  "permisos": [
+    {
+      "tipo": "required" | "optional" | "warning",
+      "icon": "📋" | "🏗️" | "⚠️" | "🔍" | "📍" | "💧" | "⚡" | "🌿" | "📐" | "🔒",
+      "nombre": "string",
+      "descripcion": "string - 1 oración",
+      "institucion": "string - ej: SEDUVI, Alcaldía, Notaría",
+      "costoAprox": "string - ej: $8,000 – $15,000 MXN o Gratuito",
+      "tiempoAprox": "string - ej: 2-4 semanas"
+    }
+  ],
+  "legal": [
+    {
+      "status": "ok" | "warn" | "bad",
+      "texto": "string"
+    }
+  ],
+  "alertas": ["string"],
+  "recomendaciones": ["string"]
+}
+Proporciona información específica y realista para CDMX. Si el uso de suelo es conservación o zona de riesgo, indícalo como riesgo alto. Incluye entre 4 y 7 permisos/trámites relevantes según el tipo de consulta. Incluye entre 4 y 6 puntos legales.`,
+        messages: [{ role: "user", content: prompt }]
+      })
+    });
+
+    if (!response.ok) throw new Error(`API error ${response.status}`);
+    const data = await response.json();
+    const raw = data.content.map(b => b.text || '').join('');
+    const clean = raw.replace(/```json|```/g, '').trim();
+    const result = JSON.parse(clean);
+
+    document.getElementById('loadingState').classList.remove('active');
+    renderResults(result, { direccion, alcaldia, tipoPropiedad, precio, superficie });
+  } catch (err) {
+    document.getElementById('loadingState').classList.remove('active');
+    document.getElementById('formCard').style.display = 'block';
+    btn.disabled = false;
+    errorBox.textContent = 'Error al conectar con la IA. Verifica tu conexión e inténtalo de nuevo.';
+    errorBox.classList.add('active');
+  }
+}
+
+function buildPrompt({ direccion, alcaldia, precio, superficie, tipoPropiedad, usoSuelo, infoAdicional, tab }) {
+  const lines = [`Tipo de consulta: ${tab === 'compra' ? 'Compra de propiedad' : tab === 'construccion' ? 'Construcción/remodelación' : 'Revisión legal'}`];
+  if (direccion) lines.push(`Ubicación: ${direccion}`);
+  if (alcaldia) lines.push(`Alcaldía: ${alcaldia}`);
+  if (tipoPropiedad) lines.push(`Tipo de propiedad: ${tipoPropiedad}`);
+  if (precio) lines.push(`Precio pedido: $${precio} MXN`);
+  if (superficie) lines.push(`Superficie: ${superficie} m²`);
+  if (usoSuelo && usoSuelo !== '') lines.push(`Uso de suelo indicado: ${usoSuelo}`);
+  if (infoAdicional) lines.push(`Información adicional: ${infoAdicional}`);
+  return lines.join('\n');
+}
+
+function renderResults(r, meta) {
+  const wrap = document.getElementById('resultsWrap');
+
+  const alertasHTML = r.alertas && r.alertas.length
+    ? `<div class="result-card full">
+        <div class="result-card-tag">⚠ Alertas importantes</div>
+        <div class="legal-list">
+          ${r.alertas.map(a => `<div class="legal-item"><div class="legal-check warn">!</div><span>${a}</span></div>`).join('')}
+        </div>
+      </div>` : '';
+
+  const recHTML = r.recomendaciones && r.recomendaciones.length
+    ? `<div class="result-card full">
+        <div class="result-card-tag">Recomendaciones</div>
+        <div class="legal-list">
+          ${r.recomendaciones.map(rec => `<div class="legal-item"><div class="legal-check ok">✓</div><span>${rec}</span></div>`).join('')}
+        </div>
+      </div>` : '';
+
+  const permisosHTML = r.permisos.map(p => `
+    <div class="permit-item ${p.tipo}">
+      <div class="permit-icon">${p.icon}</div>
+      <div class="permit-info">
+        <div class="permit-tag">${p.tipo === 'required' ? 'Obligatorio' : p.tipo === 'optional' ? 'Recomendado' : 'Alerta'}</div>
+        <div class="permit-name">${p.nombre}</div>
+        <div class="permit-desc">${p.descripcion}</div>
+        <div class="permit-meta">📍 ${p.institucion} &nbsp;|&nbsp; 💰 ${p.costoAprox} &nbsp;|&nbsp; ⏱ ${p.tiempoAprox}</div>
+      </div>
+    </div>`).join('');
+
+  const legalHTML = r.legal.map(l => `
+    <div class="legal-item">
+      <div class="legal-check ${l.status}">${l.status === 'ok' ? '✓' : l.status === 'warn' ? '!' : '✕'}</div>
+      <span>${l.texto}</span>
+    </div>`).join('');
+
+  const propLabel = [meta.tipoPropiedad, meta.alcaldia, meta.direccion].filter(Boolean).join(' · ') || 'Propiedad analizada';
+
+  wrap.innerHTML = `
+    <div class="results-header">
+      <div>
+        <div class="results-title">Reporte de análisis</div>
+        <div style="font-size:12px; color:var(--text3); margin-top:3px;">${propLabel}</div>
+      </div>
+      <div class="score-badge ${r.scoreClass}">
+        <span style="font-size:16px;">${r.scoreClass === 'safe' ? '✓' : r.scoreClass === 'caution' ? '⚠' : '✕'}</span>
+        ${r.scoreLabel}
+      </div>
+    </div>
+
+    <div class="result-card full" style="margin-bottom:14px;">
+      <div class="result-card-tag">Resumen ejecutivo</div>
+      <p class="summary-prose">${r.resumen}</p>
+    </div>
+
+    <div class="results-grid" style="margin-bottom:14px;">
+      <div class="result-card">
+        <div class="result-card-tag">Valor estimado de mercado</div>
+        <div class="value-display green">${r.valorEstimado}</div>
+        <div class="value-sub">Estimación basada en zona y tipo</div>
+        <div class="value-range">
+          <div class="range-item"><div class="range-label">Precio/m²</div><div class="range-val">${r.valorM2}</div></div>
+          <div class="range-item"><div class="range-label">Precio pedido</div><div class="range-val ${r.nivelPrecioClass}">${r.nivelPrecio}</div></div>
+        </div>
+      </div>
+      <div class="result-card">
+        <div class="result-card-tag">Costo estimado de trámites</div>
+        <div class="value-display amber">${r.costoEstimadoTramites}</div>
+        <div class="value-sub">Honorarios + derechos + gastos notariales</div>
+        <div class="value-range">
+          <div class="range-item"><div class="range-label">Tiempo total</div><div class="range-val">${r.tiempoEstimado}</div></div>
+        </div>
+      </div>
+    </div>
+
+    ${alertasHTML}
+
+    <div class="result-card full" style="margin-bottom:14px;">
+      <div class="result-card-tag">Permisos y trámites necesarios</div>
+      <div class="permits-list">${permisosHTML}</div>
+    </div>
+
+    <div class="result-card full" style="margin-bottom:14px;">
+      <div class="result-card-tag">Verificación legal</div>
+      <div class="legal-list">${legalHTML}</div>
+    </div>
+
+    ${recHTML}
+
+    <div class="disclaimer">
+      <strong>Aviso importante:</strong> Este análisis es orientativo y generado por inteligencia artificial con base en información general de CDMX. No sustituye la asesoría de un notario, abogado inmobiliario o valuador certificado. Siempre verifica la información directamente con las autoridades competentes (SEDUVI, Registro Público de la Propiedad, alcaldía correspondiente) antes de tomar decisiones de inversión.
+    </div>
+
+    <button class="reset-btn" onclick="resetForm()">
+      ← Analizar otra propiedad
+    </button>
+  `;
+
+  wrap.classList.add('active');
+  wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function resetForm() {
+  document.getElementById('resultsWrap').classList.remove('active');
+  document.getElementById('resultsWrap').innerHTML = '';
+  document.getElementById('formCard').style.display = 'block';
+  document.getElementById('analyzeBtn').disabled = false;
+  document.querySelectorAll('.loading-step').forEach(s => s.classList.remove('visible','done'));
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
+
+</body>
+</html>
