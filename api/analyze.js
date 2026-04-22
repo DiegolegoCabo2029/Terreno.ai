@@ -29,7 +29,7 @@ export default async function handler(req, res) {
         "anthropic-version": "2023-06-01"
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
+        model: "claude-sonnet-4-5",
         max_tokens: 1500,
         system: `Eres un experto en bienes raíces, trámites urbanos, uso de suelo y derecho inmobiliario en la Ciudad de México (CDMX). 
 Cuando el usuario te dé datos de una propiedad, debes responder ÚNICAMENTE en JSON válido (sin backticks, sin texto extra).
